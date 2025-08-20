@@ -2,6 +2,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import (col, when, concat, row_number)
 from pyspark.sql.window import Window
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, DecimalType, DateType
+import config
 
 class HealthDataProcessing:
     def __init__(self):
@@ -108,12 +109,11 @@ class HealthDataProcessing:
         ])
 
         self.df_raw_health_payment_data = self.spark.read.csv(
-            "/home/fkanashiro/health-payment-data-etl/data/raw/OP_DTL_GNRL_*.csv",
+            config.PROCESSED_DATA_DIR + config.RAW_CSV_FILES_PATTERN,
             header=True,
             schema=data_schema,
             quote='"',
-            escape='"',
-            multiLine=True
+            escape='"'
         )
 
     def process_manufacturer_dimension(self):
@@ -134,7 +134,7 @@ class HealthDataProcessing:
             "manufacturer_natural_key", col("Applicable_Manufacturer_or_Applicable_GPO_Making_Payment_ID")
         )
 
-        df_manufacturer_dimension.write.mode("overwrite").parquet("/home/fkanashiro/health-payment-data-etl/data/processed/manufacturer")
+        df_manufacturer_dimension.write.mode("overwrite").parquet(config.READY_DATA_DIR + "manufacturer/")
 
     def process_recipient_dimension(self):
         recipient_id_window = Window.partitionBy("Covered_Recipient_Profile_ID").orderBy("Covered_Recipient_Profile_ID")
@@ -166,16 +166,10 @@ class HealthDataProcessing:
             "recipient_natural_key", col("Covered_Recipient_Profile_ID")
         )
 
-        df_recipient_dimension.write.mode("overwrite").parquet("/home/fkanashiro/health-payment-data-etl/data/processed/recipient")
+        df_recipient_dimension.write.mode("overwrite").parquet(config.READY_DATA_DIR + "recipient/")
 
     def process_hospital_dimension(self):
-        teaching_hospital_id_window = (
-            Window.partitionBy("Teaching_Hospital_ID")
-                .orderBy(
-                    col("Teaching_Hospital_CCN").desc_nulls_last(),
-                    col("Teaching_Hospital_Name")
-                )
-        )            
+        teaching_hospital_id_window = Window.partitionBy("Teaching_Hospital_ID").orderBy("Teaching_Hospital_ID")  
 
         df_teaching_hospital_dimension = (self.df_raw_health_payment_data.select(
             "Teaching_Hospital_ID",
@@ -190,10 +184,10 @@ class HealthDataProcessing:
             "teaching_hospital_natural_key", col("Teaching_Hospital_ID")
         )
 
-        df_teaching_hospital_dimension.write.mode("overwrite").parquet("/home/fkanashiro/health-payment-data-etl/data/processed/teaching_hospital")        
+        df_teaching_hospital_dimension.write.mode("overwrite").parquet(config.READY_DATA_DIR + "teaching_hospital/")
 
-
-HDP = HealthDataProcessing()
-HDP.process_recipient_dimension()
-HDP.process_manufacturer_dimension()
-HDP.process_hospital_dimension()
+def run():
+    HDP = HealthDataProcessing()    
+    #HDP.process_manufacturer_dimension()
+    HDP.process_hospital_dimension()
+    #HDP.process_recipient_dimension()

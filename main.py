@@ -1,8 +1,8 @@
-from scripts import clean_csv_data
+from scripts import split_raw_csv
 from scripts import transform_data
 
 def main():
-    clean_csv_data.run()
+    split_raw_csv.run()
     #transform_data.run()
 
 if __name__ == "__main__":
