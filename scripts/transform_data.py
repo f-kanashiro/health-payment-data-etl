@@ -113,7 +113,8 @@ class HealthDataProcessing:
             header=True,
             schema=data_schema,
             quote='"',
-            escape='"'
+            escape='"',
+            multiLine=True
         )
 
     def process_manufacturer_dimension(self):
@@ -188,6 +189,6 @@ class HealthDataProcessing:
 
 def run():
     HDP = HealthDataProcessing()    
-    #HDP.process_manufacturer_dimension()
+    HDP.process_manufacturer_dimension()
     HDP.process_hospital_dimension()
-    #HDP.process_recipient_dimension()
+    HDP.process_recipient_dimension()
