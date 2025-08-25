@@ -1,13 +1,21 @@
 import os
 import glob
 import pandas as pd
+import boto3
 from multiprocessing import Pool, cpu_count
+from io import StringIO
 
 import config
 
+minio_client = boto3.client(
+    "s3",
+    endpoint_url=config.MINIO_ENDPOINT,
+    aws_access_key_id=config.MINIO_ACCESS_KEY,
+    aws_secret_access_key=config.MINIO_SECRET_KEY
+)
+
 def split_csv(csv):
     base_name = os.path.splitext(os.path.basename(csv))[0]
-    #os.makedirs(config.PROCESSED_DATA_DIR, exist_ok=True)
 
     csv_reader = pd.read_csv(
         csv,
@@ -20,9 +28,16 @@ def split_csv(csv):
     )
 
     for i, chunk in enumerate(csv_reader, start=1):
-        out_path = os.path.join(config.PROCESSED_DATA_DIR, f"{base_name}_part_{i}.csv")
-        chunk.to_csv(out_path, index=False)
-        print(f"[OK] Written {out_path} with {len(chunk)} rows")
+        out_key = f"{base_name}_part_{i}.csv"
+        csv_buffer = StringIO()
+        chunk.to_csv(csv_buffer, index=False)
+        csv_buffer.seek(0)
+
+        minio_client.put_object(
+            Bucket=config.MINIO_BUCKET_PROCESSED_DATA,
+            Key=out_key,
+            Body=csv_buffer.getvalue()
+        )
 
 
 def parallel_process_raw_csv():
